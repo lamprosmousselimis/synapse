@@ -112,7 +112,9 @@ class SpawnProc(s_base.Base):
             '''
             Simply wait for the process to complete (run from a separate thread)
             '''
+            print(f'{self}:{pid}: REAPLOOP JOINING PROC {self.proc}:{self.proc.pid}')
             self.procstat = self.proc.join()
+            print(f'{self}:{pid}: REAPLOOP JOINED PROC {self.proc}:{self.proc.pid}')
 
         # avoid blocking the ioloop during process construction
         def getproc():
