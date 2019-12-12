@@ -139,7 +139,7 @@ class SpawnProc(s_base.Base):
     async def xact(self, mesg):
         def doit():
             thread = threading.current_thread()
-            print(f'{self}:{pid}: DOIT CALLED FROM {thread}')
+            print(f'{self}:{pid}: DOIT CALLED WITH [{mesg}] FROM {thread}')
             self.todo.put(mesg)
             retn = self.done.get()
             print(f'{self}:{pid}: DOIT DONE [{retn}] FROM {thread}')
