@@ -102,10 +102,17 @@ class SpawnProc(s_base.Base):
 
         self.todo = self.mpctx.Queue()
         self.done = self.mpctx.Queue()
+        self.procstat = None
 
         self.obsolete = False
 
         spawninfo = await core.getSpawnInfo()
+
+        def reaploop():
+            '''
+            Simply wait for the process to complete (run from a separate thread)
+            '''
+            self.procstat = self.proc.join()
 
         # avoid blocking the ioloop during process construction
         def getproc():
@@ -114,24 +121,12 @@ class SpawnProc(s_base.Base):
 
         await s_coro.executor(getproc)
 
-        def killproc():
-            print(f'{self}:{pid}: CALLING TERMINATE FOR {self.proc.pid}')
-            self.proc.terminate()
-            print(f'{self}:{pid}: JOINING ON PROCESS {self.proc.pid}')
-            self.proc.join()
-            print(f'{self}:{pid}: JOINED ON PROCESS {self.proc.pid}')
-            return 'KILLPROC RAN GOOD'
+        s_coro.executor(reaploop)
 
         async def fini():
-            print(f'{self}:{pid}: CALLING KILLPROC')
-            # if self.core.isfini:
-            #     # Call inline with the ioloop during teardown
-            #     print(f'{self}:{pid}: CALLING INLINE')
-            #     killproc()
-            # else:
-            #     print(f'{self}:{pid}: CALLING VIA EXECUTOR')
-            await s_coro.executor(killproc)
-            print(f'{self}:{pid}: KILLPROC COMPLETED')
+            print(f'{self}:{pid}: CALLING TERMINATE FOR {self.proc.pid}')
+            self.proc.terminate()
+            print(f'{self}:{pid}: CALLED TERMINATE {self.proc.pid}')
         self.onfini(fini)
 
     async def retire(self):
