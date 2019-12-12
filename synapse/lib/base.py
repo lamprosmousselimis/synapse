@@ -1,4 +1,5 @@
 import gc
+import os
 import atexit
 import signal
 import asyncio
@@ -18,6 +19,8 @@ import synapse.lib.coro as s_coro
 
 logger = logging.getLogger(__name__)
 
+pid = os.getpid()
+
 def _fini_atexit(): # pragma: no cover
 
     for item in gc.get_objects():
@@ -33,7 +36,7 @@ def _fini_atexit(): # pragma: no cover
 
         if not item._fini_atexit:
             if __debug__:
-                print(f'At exit: Missing fini for {item}')
+                print(f'At exit:{pid}: Missing fini for {item}')
                 for depth, call in enumerate(item.call_stack[:-2]):
                     print(f'{depth+1:3}: {call.strip()}')
             continue
@@ -353,7 +356,7 @@ class Base:
             return
 
         for task in self._active_tasks.copy():
-
+            print(f'{self}:{pid}: KILLING TASK: {task}')
             task.cancel()
             try:
                 await task
@@ -370,7 +373,10 @@ class Base:
         '''
         assert self.anitted, f'{self.__class__.__name__} initialized improperly.  Must use Base.anit class method.'
 
+        print(f'{self}:{pid}: FINI START')
+
         if self.isfini:
+            print(f'{self}:{pid}: OBJECT IS ALREADY FINI')
             return
 
         if __debug__:
@@ -388,24 +394,34 @@ class Base:
         if fevt is not None:
             fevt.set()
 
+        if self.tofini:
+            print(f'{self}:{pid}: TEARING DOWN {len(self.tofini)} BASE OBJECTS')
         for base in list(self.tofini):
+            print(f'{self}:{pid}: CALLING FINI() ON {base}')
             await base.fini()
+            print(f'{self}:{pid}: CALLED FINI() ON {base}')
+        if self.tofini:
+            print(f'{self}:{pid}: DONE TEARING DOWN BASE OBJECTS')
 
         try:
             await self._kill_active_tasks()
         except:
-            logger.exception(f'{self} - Exception during _kill_active_tasks')
+            logger.exception(f'{self}:{pid}: - Exception during _kill_active_tasks')
 
         for fini in self._fini_funcs:
             try:
+                print(f'{self}:{pid}: RUNNING FUNC {fini}')
                 await s_coro.ornot(fini)
             except asyncio.CancelledError:
                 raise
             except Exception:
-                logger.exception(f'{self} - fini function failed: {fini}')
+                logger.exception(f'{self}:{pid}: - fini function failed: {fini}')
+            else:
+                print(f'{self}:{pid}: DONE WITH FUNC {fini}')
 
         self._syn_funcs.clear()
         self._fini_funcs.clear()
+        print(f'{self}:{pid}: FINI END')
         return 0
 
     @contextlib.contextmanager

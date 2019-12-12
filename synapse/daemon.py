@@ -1,7 +1,9 @@
+import os
 import types
 import asyncio
 import logging
 
+pid = os.getpid()
 logger = logging.getLogger(__name__)
 
 import synapse.exc as s_exc
@@ -28,6 +30,9 @@ class Sess(s_base.Base):
         self.iden = s_common.guid()
         self.user = None
         self.conninfo = {}
+        def onfini():
+            print('SEss fini!')
+        self.onfini(onfini)
 
     def getSessItem(self, name):
         return self.items.get(name)
@@ -171,8 +176,8 @@ async def t2call(link, meth, args, kwargs):
             return
 
         except Exception as e:
-
-            logger.exception(f'error during task: {meth.__name__}')
+            print(link, link.isfini)
+            logger.exception(f'error during genr task: {meth.__name__}')
 
             if not link.isfini:
 
@@ -405,6 +410,7 @@ class Daemon(s_base.Base):
             if isinstance(item, s_telepath.Aware):
                 item = await s_coro.ornot(item.getTeleApi, link, mesg, path)
                 if isinstance(item, s_base.Base):
+                    print(f'{link}:{pid}: AWARE OBJET MADE SHARED OBJ: {item}')
                     link.onfini(item.fini)
 
             reply[1]['sharinfo'] = s_reflect.getShareInfo(item)

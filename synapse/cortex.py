@@ -828,6 +828,10 @@ class Cortex(s_cell.Cell):
 
         await s_cell.Cell.__anit__(self, dirn, conf=conf)
 
+        def oninitfini():
+            print('first cortex fini!')
+        self.onfini(oninitfini)
+
         # share ourself via the cell dmon as "cortex"
         # for potential default remote use
         self.dmon.share('cortex', self)
@@ -944,6 +948,10 @@ class Cortex(s_cell.Cell):
 
         self.spawnpool = await s_spawn.SpawnPool.anit(self)
         self.onfini(self.spawnpool)
+
+        def onfinifini():
+            print('last cortex fini!')
+        self.onfini(onfinifini)
 
     async def bumpSpawnPool(self):
         if self.spawnpool is not None:

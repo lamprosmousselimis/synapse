@@ -25,6 +25,8 @@ import synapse.lib.grammar as s_grammar
 
 logger = logging.getLogger(__name__)
 
+pid = os.getpid()
+
 def corework(spawninfo, todo, done):
 
     # This logging call is okay to run since we're executing in
@@ -74,7 +76,16 @@ def corework(spawninfo, todo, done):
 
                 await s_coro.executor(done.put, wasfini)
 
-    asyncio.run(workloop())
+    try:
+        asyncio.run(workloop())
+    except Exception as e:
+        print(e)
+        logger.exception('hmmmm?')
+        raise
+    except KeyboardInterrupt as e:
+        print(e)
+        logger.exception('sigint much?')
+        raise
 
 class SpawnProc(s_base.Base):
     '''
@@ -104,12 +115,23 @@ class SpawnProc(s_base.Base):
         await s_coro.executor(getproc)
 
         def killproc():
+            print(f'{self}:{pid}: CALLING TERMINATE FOR {self.proc.pid}')
             self.proc.terminate()
+            print(f'{self}:{pid}: JOINING ON PROCESS {self.proc.pid}')
             self.proc.join()
+            print(f'{self}:{pid}: JOINED ON PROCESS {self.proc.pid}')
+            return 'KILLPROC RAN GOOD'
 
         async def fini():
+            print(f'{self}:{pid}: CALLING KILLPROC')
+            # if self.core.isfini:
+            #     # Call inline with the ioloop during teardown
+            #     print(f'{self}:{pid}: CALLING INLINE')
+            #     killproc()
+            # else:
+            #     print(f'{self}:{pid}: CALLING VIA EXECUTOR')
             await s_coro.executor(killproc)
-
+            print(f'{self}:{pid}: KILLPROC COMPLETED')
         self.onfini(fini)
 
     async def retire(self):
@@ -132,8 +154,8 @@ class SpawnPool(s_base.Base):
 
         self.poolsize = await core.getConfOpt('spawn:poolsize')
 
-        self.spawns = {}
-        self.spawnq = collections.deque()
+        self.spawns = {}  # iden -> SpawnProc
+        self.spawnq = collections.deque()  # sequence of available SpawnProc items.
 
         async def fini():
             await self.kill()
@@ -142,12 +164,17 @@ class SpawnPool(s_base.Base):
 
     async def bump(self):
         [await s.retire() for s in list(self.spawns.values())]
+        # procs = list(self.spawnq)
+        # self.spawnq.clear()
+        # [await s.fini() for s in procs]
         [await s.fini() for s in self.spawnq]
         self.spawnq.clear()
 
     async def kill(self):
+        print(f'{self}:{pid}: START KILL FUNC')
         self.spawnq.clear()
         [await s.fini() for s in list(self.spawns.values())]
+        print(f'{self}:{pid}: DONE WITH KILL FUNC')
 
     @contextlib.asynccontextmanager
     async def get(self):
@@ -218,6 +245,8 @@ class SpawnCore(s_base.Base):
 
             self.stormcmds[name] = ctor
 
+        self.onfini(self._finfini)
+
         self.boss = await s_boss.Boss.anit()
         self.onfini(self.boss.fini)
 
@@ -228,7 +257,12 @@ class SpawnCore(s_base.Base):
         self.onfini(self.prox.fini)
 
         self.hive = await s_hive.openurl(f'cell://{self.dirn}', name='*/hive')
-        self.onfini(self.hive.fini)
+        async def hivefini():
+            print('hive fini...')
+            await self.hive.fini()
+            print('hive finid!')
+        self.onfini(hivefini)
+        # self.onfini(self.hive.fini)
 
         # TODO cortex configured for remote auth...
         node = await self.hive.open(('auth',))
@@ -265,6 +299,9 @@ class SpawnCore(s_base.Base):
 
         # initialize pass-through methods from the telepath proxy
         self.runRuntLift = self.prox.runRuntLift
+
+    def _finfini(self):
+        print('fini in spawncore!')
 
     def getStormQuery(self, text):
         '''

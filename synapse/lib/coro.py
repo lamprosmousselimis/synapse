@@ -1,6 +1,7 @@
 '''
 Async/Coroutine related utilities.
 '''
+import os
 import queue
 import asyncio
 import inspect
@@ -9,9 +10,12 @@ import functools
 import multiprocessing
 
 logger = logging.getLogger(__name__)
+pid = os.getpid()
 
 import synapse.exc as s_exc
 import synapse.glob as s_glob
+
+import concurrent.futures.thread as cf_thread
 
 def iscoro(item):
     return inspect.iscoroutine(item)
@@ -60,7 +64,12 @@ def executor(func, *args, **kwargs):
     def real():
         return func(*args, **kwargs)
 
-    return asyncio.get_running_loop().run_in_executor(None, real)
+    loop = asyncio.get_running_loop()
+    print(f'EXECUTOR:{pid}: {loop._default_executor}, {func}, {args}, {kwargs}')
+    # print(f'CF_THREAD GLOBAL SHUTDOWN: {cf_thread._shutdown}')
+    # if loop._default_executor:
+    #     print(f'EXECUTOR STATE: {loop._default_executor._shutdown}')
+    return loop.run_in_executor(None, real)
 
 async def event_wait(event: asyncio.Event, timeout=None):
     '''

@@ -128,6 +128,8 @@ class Link(s_base.Base):
 
         async def fini():
             self.writer.close()
+            # FIXME: This can cause link fini teardown issue?!!?
+            print(f'Link writer: {self.writer}')
             await self.writer.wait_closed()
 
         self.onfini(fini)

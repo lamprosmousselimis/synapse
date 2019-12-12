@@ -371,8 +371,10 @@ class Cell(s_base.Base, s_telepath.Aware):
     confbase = ()
 
     async def __anit__(self, dirn, conf=None, readonly=False):
-
         await s_base.Base.__anit__(self)
+        def oninitfini():
+            print('first cell fini!')
+        self.onfini(oninitfini)
 
         s_telepath.Aware.__init__(self)
 
@@ -451,6 +453,10 @@ class Cell(s_base.Base, s_telepath.Aware):
             [await s.fini() for s in self.sessions.values()]
 
         self.onfini(fini)
+
+        def onfinifini():
+            print('last cell fini!')
+        self.onfini(onfinifini)
 
     async def getConfOpt(self, name):
         return self.conf.get(name)
@@ -590,7 +596,12 @@ class Cell(s_base.Base, s_telepath.Aware):
             logging.exception(f'Unknown dmon listen error.')
             raise
 
-        self.onfini(self.dmon.fini)
+        async def dmonfini():
+            print('fini the dmon')
+            await self.dmon.fini()
+            print('done fini the dmon')
+        # self.onfini(self.dmon.fini)
+        self.onfini(dmonfini)
 
     async def _initCellHive(self):
 

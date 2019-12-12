@@ -598,7 +598,9 @@ class TeleHive(Hive):
         return iden, evnt
 
     async def _runHiveLoop(self):
+        logger.info('telehive: running hive loop???')
         while not self.isfini:
+            logger.info('calling edits()')
             async for mesg in self.proxy.edits():
                 await self.mesgbus.dist(mesg)
 
