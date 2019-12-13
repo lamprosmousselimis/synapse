@@ -538,11 +538,13 @@ class CoreApi(s_cell.CellApi):
                     'query': text,
                 }
             }
-
+            print('GETTING PROC')
             async with self.cell.spawnpool.get() as proc:
+                print(f'GOT PROC: {proc}')
                 if await proc.xact(info):
+                    print('FINI THE LINK')
                     await link.fini()
-
+            print('Raising DmonSpawn')
             raise s_exc.DmonSpawn()
 
         async for mesg in view.streamstorm(text, opts, user=self.user):

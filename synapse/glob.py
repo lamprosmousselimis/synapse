@@ -60,7 +60,7 @@ def initloop():
             _glob_thrd.setDaemon(True)
             _glob_thrd.start()
 
-    _glob_loop.set_debug(True)
+    # _glob_loop.set_debug(True)
     return _glob_loop
 
 def iAmLoop():

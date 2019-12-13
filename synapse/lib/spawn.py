@@ -68,14 +68,16 @@ def corework(spawninfo, todo, done):
                     return
 
                 link = await s_link.fromspawn(item.get('link'))
-
+                print(f'CALLING T2CALL FROM {pid}')
                 await s_daemon.t2call(link, storm, (item,), {})
-
+                print(f'CALLED T2CALL FROM {pid}')
                 wasfini = link.isfini
+                print(f'LINK WASFINI: {wasfini}: {pid}')
 
                 await link.fini()
-
+                print(f'CALLING DONE PUT: {wasfini} {pid}')
                 await s_coro.executor(done.put, wasfini)
+                print(f'CALLED DONE PUT: {pid}')
 
     try:
         asyncio.run(workloop())
